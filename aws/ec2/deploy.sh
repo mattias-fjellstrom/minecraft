@@ -86,4 +86,4 @@ publicIp=$(aws cloudformation describe-stacks \
 
 echo "Connect by SSH to the instance with"
 echo
-echo "ssh -i $keyPairName ec2-user@$publicIp"
+echo "ssh -i $keyPairName.pem ec2-user@$publicIp"
