@@ -37,7 +37,7 @@ valid_regions=(
 )
 
 if [[ ! " ${valid_regions[*]} " =~ [[:space:]]${region}[[:space:]] ]]; then
-  echo "Invalid region [$region] specified. Use a valid AWS region."
+  echo "Invalid region $region specified. Use a valid AWS region."
   exit 1
 fi
 
