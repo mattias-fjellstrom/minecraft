@@ -2,7 +2,7 @@
 set -e
 
 if [[ $# -ne 1 ]]; then
-    echo "Error: Unsupported number of arguments"
+    echo "Error: Unsupported number of arguments."
     echo
     echo "USAGE:"
     echo "  deploy.sh <region>"
@@ -10,12 +10,10 @@ if [[ $# -ne 1 ]]; then
     echo "WHERE:"
     echo "  region  The name of the AWS region where the server will be placed,"
     echo "          e.g. eu-west-1, us-east-1, etc."
-
     exit 1
 fi
 
 region=$1
-
 valid_regions=(
     "eu-north-1"
     "ap-south-1"
