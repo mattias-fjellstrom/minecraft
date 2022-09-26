@@ -56,25 +56,25 @@ Resources:
           curl -L -o /etc/yum.repos.d/corretto.repo https://yum.corretto.aws/corretto.repo
           yum install -y java-17-amazon-corretto-devel
 
-          # add dedicated minecraft user and create directories for minecraft
-          adduser minecraft
+          # create directories for minecraft
           mkdir /opt/minecraft
           mkdir /opt/minecraft/server/
           cd /opt/minecraft/server
-          chown -R minecraft:minecraft /opt/minecraft/
 
-          # download minecraft server 1.19.2
+          # download minecraft server 1.19.2 and configuration files
           wget https://piston-data.mojang.com/v1/objects/f69c284232d7c7580bd89a5a4931c3581eae1378/server.jar
-
-          # download server configuration files
           wget https://raw.githubusercontent.com/mattias-fjellstrom/minecraft/main/eula.txt
           wget https://raw.githubusercontent.com/mattias-fjellstrom/minecraft/main/server.properties
 
+          # create a dedicated user for minecraft
+          adduser minecraft
+          chown -R minecraft:minecraft /opt/minecraft/
+
           # start up server using screen
-          # yum install -y screen
-          # su minecraft
-          # screen -S minecraftserver -d -m java -Xmx1024M -Xms1024M -jar server.jar nogui
-          # exit
+          yum install -y screen
+          su minecraft
+          screen -S minecraftserver -d -m java -Xmx1024M -Xms1024M -jar server.jar nogui
+          exit
 
           # signal success status to cloudformation
           /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource Instance --region ${AWS::Region}
