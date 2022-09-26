@@ -8,27 +8,14 @@ Parameters:
     Description: Name of an existing EC2 KeyPair to enable SSH access to the instance
     Type: AWS::EC2::KeyPair::KeyName
     ConstraintDescription: Must be the name of an existing keypair
-    Default: mc-eu-west-1
 
-  InstanceType:
-    Description: EC2 instance type
+  SafeLocation:
+    Description: Lock down access to this instance to a specified IP range
     Type: String
-    Default: t2.xlarge
-    AllowedValues:
-      - t2.small
-      - t2.medium
-      - t2.large
-      - t2.xlarge
 
-  SSHLocation:
-    Description: IP CIDR range for SSH access
-    Type: String
-    Default: "212.85.67.106/32"
-
-  ImageId:
-    Description: Amazon Linux 2 in eu-west-1 (Ireland)
+  ImageAmiId:
+    Description: Amazon Linux 2 AMI
     Type: AWS::EC2::Image::Id
-    Default: ami-0ea0f26a6d50850c5
 
 Resources:
   SecurityGroup:
@@ -37,17 +24,13 @@ Resources:
       GroupDescription: Allow admin SSH access
       SecurityGroupIngress:
         - IpProtocol: TCP
-          FromPort: 80
-          ToPort: 80
-          CidrIp: !Ref SSHLocation
-        - IpProtocol: TCP
-          FromPort: 443
-          ToPort: 443
-          CidrIp: !Ref SSHLocation
-        - IpProtocol: TCP
           FromPort: 22
           ToPort: 22
-          CidrIp: !Ref SSHLocation
+          CidrIp: !Ref SafeLocation
+        - IpProtocol: TCP
+          FromPort: 25565
+          ToPort: 25565
+          CidrIp: !Ref SafeLocation
 
   Instance:
     Type: AWS::EC2::Instance
@@ -55,11 +38,11 @@ Resources:
       ResourceSignal:
         Count: 1
     Properties:
-      InstanceType: !Ref InstanceType
+      InstanceType: t2.xlarge
       SecurityGroups:
         - !Ref SecurityGroup
       KeyName: !Ref KeyName
-      ImageId: !Ref ImageId
+      ImageId: !Ref ImageAmiId
       Tags:
         - Key: Name
           Value: minecraft
@@ -67,11 +50,13 @@ Resources:
         Fn::Base64: !Sub |
           #!/bin/bash
           yum update -y
+
+          # install amazon corretto java
           rpm --import https://yum.corretto.aws/corretto.key
           curl -L -o /etc/yum.repos.d/corretto.repo https://yum.corretto.aws/corretto.repo
           yum install -y java-17-amazon-corretto-devel
 
-          # add dedicated user and create directories for minecraft
+          # add dedicated minecraft user and create directories for minecraft
           adduser minecraft
           mkdir /opt/minecraft
           mkdir /opt/minecraft/server/
@@ -81,15 +66,17 @@ Resources:
           # download minecraft server 1.19.2
           wget https://piston-data.mojang.com/v1/objects/f69c284232d7c7580bd89a5a4931c3581eae1378/server.jar
 
-          # agree to EULA
-          echo "eula=true" > eula.txt
+          # download server configuration files
+          wget https://raw.githubusercontent.com/mattias-fjellstrom/minecraft/main/eula.txt
+          wget https://raw.githubusercontent.com/mattias-fjellstrom/minecraft/main/server.properties
 
-          # create a server property file
-          echo "server-port=25565" > server.properties
+          # start up server using screen
+          # yum install -y screen
+          # su minecraft
+          # screen -S minecraftserver -d -m java -Xmx1024M -Xms1024M -jar server.jar nogui
+          # exit
 
-          # start minecraft server
-
-          # send signal to cloudformation
+          # signal success status to cloudformation
           /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource Instance --region ${AWS::Region}
 
 Outputs:
