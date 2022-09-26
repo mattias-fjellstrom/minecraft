@@ -1,0 +1,98 @@
+---
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: A Minecraft server
+
+Parameters:
+  KeyName:
+    Description: Name of an existing EC2 KeyPair to enable SSH access to the instance
+    Type: AWS::EC2::KeyPair::KeyName
+    ConstraintDescription: Must be the name of an existing keypair
+    Default: mc-eu-west-1
+
+  InstanceType:
+    Description: EC2 instance type
+    Type: String
+    Default: t2.xlarge
+    AllowedValues:
+      - t2.small
+      - t2.medium
+      - t2.large
+      - t2.xlarge
+
+  SSHLocation:
+    Description: IP CIDR range for SSH access
+    Type: String
+    Default: "212.85.67.106/32"
+
+  ImageId:
+    Description: Amazon Linux 2 in eu-west-1 (Ireland)
+    Type: AWS::EC2::Image::Id
+    Default: ami-0ea0f26a6d50850c5
+
+Resources:
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow admin SSH access
+      SecurityGroupIngress:
+        - IpProtocol: TCP
+          FromPort: 80
+          ToPort: 80
+          CidrIp: !Ref SSHLocation
+        - IpProtocol: TCP
+          FromPort: 443
+          ToPort: 443
+          CidrIp: !Ref SSHLocation
+        - IpProtocol: TCP
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Ref SSHLocation
+
+  Instance:
+    Type: AWS::EC2::Instance
+    CreationPolicy:
+      ResourceSignal:
+        Count: 1
+    Properties:
+      InstanceType: !Ref InstanceType
+      SecurityGroups:
+        - !Ref SecurityGroup
+      KeyName: !Ref KeyName
+      ImageId: !Ref ImageId
+      Tags:
+        - Key: Name
+          Value: minecraft
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          yum update -y
+          rpm --import https://yum.corretto.aws/corretto.key
+          curl -L -o /etc/yum.repos.d/corretto.repo https://yum.corretto.aws/corretto.repo
+          yum install -y java-17-amazon-corretto-devel
+
+          # add dedicated user and create directories for minecraft
+          adduser minecraft
+          mkdir /opt/minecraft
+          mkdir /opt/minecraft/server/
+          cd /opt/minecraft/server
+          chown -R minecraft:minecraft /opt/minecraft/
+
+          # download minecraft server 1.19.2
+          wget https://piston-data.mojang.com/v1/objects/f69c284232d7c7580bd89a5a4931c3581eae1378/server.jar
+
+          # agree to EULA
+          echo "eula=true" > eula.txt
+
+          # create a server property file
+          echo "server-port=25565" > server.properties
+
+          # start minecraft server
+
+          # send signal to cloudformation
+          /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource Instance --region ${AWS::Region}
+
+Outputs:
+  PublicIP:
+    Description: Public IP of the EC2 instance
+    Value: !GetAtt Instance.PublicIp
