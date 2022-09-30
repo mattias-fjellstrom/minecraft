@@ -1,7 +1,8 @@
 ---
 AWSTemplateFormatVersion: 2010-09-09
 
-Description: A Minecraft server running on EC2
+Description: >
+  A Minecraft server running on EC2. The server will be placed on the default VPC.
 
 Parameters:
   KeyName:
@@ -10,11 +11,11 @@ Parameters:
     ConstraintDescription: Must be the name of an existing keypair
 
   SafeLocation:
-    Description: Lock down access to this instance to a specified IP range
+    Description: Lock down access to this instance to a specified IP CIDR range
     Type: String
 
   ImageAmiId:
-    Description: Amazon Linux 2 AMI
+    Description: EC2 AMI ID
     Type: AWS::EC2::Image::Id
 
 Resources:
@@ -37,6 +38,7 @@ Resources:
     CreationPolicy:
       ResourceSignal:
         Count: 1
+        Timeout: PT10M
     Properties:
       InstanceType: t2.xlarge
       SecurityGroups:
@@ -61,7 +63,7 @@ Resources:
           mkdir /opt/minecraft/server/
           cd /opt/minecraft/server
 
-          # download minecraft server 1.19.2 and configuration files
+          # download minecraft server 1.19.2 and server configuration files
           wget https://piston-data.mojang.com/v1/objects/f69c284232d7c7580bd89a5a4931c3581eae1378/server.jar
           wget https://raw.githubusercontent.com/mattias-fjellstrom/minecraft/main/eula.txt
           wget https://raw.githubusercontent.com/mattias-fjellstrom/minecraft/main/server.properties
