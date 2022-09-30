@@ -74,9 +74,7 @@ Resources:
 
           # start up server using screen
           yum install -y screen
-          su minecraft
-          screen -S minecraftserver -d -m java -Xmx1024M -Xms1024M -jar server.jar nogui
-          exit
+          su minecraft -c 'screen -S minecraftserver -d -m java -Xmx1024M -Xms1024M -jar server.jar nogui'
 
           # signal success status to cloudformation
           /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource Instance --region ${AWS::Region}
@@ -85,3 +83,6 @@ Outputs:
   PublicIP:
     Description: Public IP of the EC2 instance
     Value: !GetAtt Instance.PublicIp
+  PublicDNS:
+    Description: Public DNS name of the EC2 instance
+    Value: !GetAtt Instance.PublicDnsName

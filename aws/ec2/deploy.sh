@@ -81,9 +81,19 @@ aws cloudformation deploy \
 
 publicIp=$(aws cloudformation describe-stacks \
     --stack-name minecraft \
-    --query 'Stacks[].Outputs[][].OutputValue' \
+    --query 'Stacks[].Outputs[0].OutputValue' \
+    --output text)
+publicDNS=$(aws cloudformation describe-stacks \
+    --stack-name minecraft \
+    --query 'Stacks[].Outputs[1].OutputValue' \
     --output text)
 
 echo "Connect by SSH to the instance with"
 echo
 echo "ssh -i $keyPairName.pem ec2-user@$publicIp"
+echo "or"
+echo "ssh -i $keyPairName.pem ec2-user@$publicDNS"
+echo
+echo "Connect your Minecraft client to"
+echo
+echo "$publicDNS"
