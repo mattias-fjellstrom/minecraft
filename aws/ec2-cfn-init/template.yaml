@@ -1,0 +1,93 @@
+---
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: >
+  A Minecraft server running on EC2. The server will be placed on the default VPC.
+
+Parameters:
+  KeyName:
+    Description: Name of an existing EC2 KeyPair to enable SSH access to the instance
+    Type: AWS::EC2::KeyPair::KeyName
+    ConstraintDescription: Must be the name of an existing keypair
+
+  SafeLocation:
+    Description: Lock down access to this instance to a specified IP CIDR range
+    Type: String
+
+  ImageAmiId:
+    Description: EC2 AMI ID
+    Type: AWS::EC2::Image::Id
+
+Resources:
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow admin SSH access
+      SecurityGroupIngress:
+        - IpProtocol: TCP
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Ref SafeLocation
+        - IpProtocol: TCP
+          FromPort: 25565
+          ToPort: 25565
+          CidrIp: !Ref SafeLocation
+
+  Instance:
+    Type: AWS::EC2::Instance
+    Metadata:
+      AWS::CloudFormation::Init:
+        config:
+          packages:
+            yum:
+              java-17-amazon-corretto-devel: []
+              screen: []
+          files:
+            /opt/minecraft/server/eula.txt:
+              source: https://raw.githubusercontent.com/mattias-fjellstrom/minecraft/main/eula.txt
+              owner: root
+              group: root
+            /opt/minecraft/server/server.properties:
+              source: https://raw.githubusercontent.com/mattias-fjellstrom/minecraft/main/server.properties
+              owner: root
+              group: root
+            /opt/minecraft/server/server.jar:
+              source: https://piston-data.mojang.com/v1/objects/f69c284232d7c7580bd89a5a4931c3581eae1378/server.jar
+              owner: root
+              group: root
+          commands:
+            start_server:
+              cwd: /opt/minecraft/server/
+              command: screen -S minecraftserver -d -m java -Xmx1024M -Xms1024M -jar server.jar nogui
+    CreationPolicy:
+      ResourceSignal:
+        Count: 1
+        Timeout: PT10M
+    Properties:
+      InstanceType: t2.xlarge
+      SecurityGroups:
+        - !Ref SecurityGroup
+      KeyName: !Ref KeyName
+      ImageId: !Ref ImageAmiId
+      Tags:
+        - Key: Name
+          Value: minecraft
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash -xe
+          yum update -y
+          yum install -y aws-cfn-bootstrap
+
+          # Call the init script to install packages, fetch files, and start server
+          /opt/aws/bin/cfn-init --stack ${AWS::StackName} --resource Instance --region ${AWS::Region}
+
+          # Send a signal to CloudFormation with success/failure status
+          /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource Instance --region ${AWS::Region}
+
+Outputs:
+  PublicIP:
+    Description: Public IP of the EC2 instance
+    Value: !GetAtt Instance.PublicIp
+  PublicDNS:
+    Description: Public DNS name of the EC2 instance
+    Value: !GetAtt Instance.PublicDnsName
