@@ -6,13 +6,11 @@ Sets up the Minecraft server on an EC2 instance running Amazon Linux 2.
 
 ### Deploy
 
-Set up the Minecraft instance in the `eu-west-1` region (Ireland) with
+Create the infrastructure with
 
 ```sh
-./deploy.sh eu-west-1
+./deploy.sh
 ```
-
-Use a different region if you wish.
 
 ### Delete
 

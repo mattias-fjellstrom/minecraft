@@ -15,8 +15,9 @@ Parameters:
     Type: String
 
   ImageAmiId:
-    Description: EC2 AMI ID
-    Type: AWS::EC2::Image::Id
+    Description: EC2 AMI ID from AWS public parameter store
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2
 
 Resources:
   SecurityGroup:
